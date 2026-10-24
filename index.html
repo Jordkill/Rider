@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ride Clans – Trottinettes</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0b0d12">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{--bg:#f3f1ea;--sf:#fff;--tx:#14181f;--mu:#6a707c;--ac:#ffc933;--acx:#14181f;--ln:#dcd9cf}
+@media (prefers-color-scheme:dark){:root{--bg:#0b0d12;--sf:#171a22;--tx:#f4f4f1;--mu:#8d93a0;--ln:#262b36}}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--tx);font:15px/1.4 "Trebuchet MS","Segoe UI",system-ui,sans-serif;overflow:hidden}
+#app{height:100%;display:none;flex-direction:column;max-width:560px;margin:0 auto;position:relative}
+main{flex:1;position:relative;overflow:hidden}
+.pg{position:absolute;inset:0;overflow-y:auto;padding:16px;display:none}
+.pg.on{display:block}
+#pg-map{padding:0;overflow:hidden}
+.full{position:fixed;inset:0;z-index:2000;background:var(--bg);overflow-y:auto;padding:20px;display:none}
+.full>div{max-width:460px;margin:0 auto}
+nav{display:flex;background:var(--sf);border-top:1px solid var(--ln);padding-bottom:env(safe-area-inset-bottom,0)}
+nav button{flex:1;padding:10px 0 9px;background:none;border:0;color:var(--mu);font:inherit;font-size:12px;cursor:pointer}
+nav button b{display:block;font-size:19px;font-weight:400}
+nav button.on{color:var(--tx);font-weight:700}
+button:focus-visible,input:focus-visible,a:focus-visible,select:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
+h1{font:800 26px/1.1 Georgia,"Times New Roman",serif;letter-spacing:-.5px;margin:4px 0 14px}
+.card{background:var(--sf);border:1px solid var(--ln);border-radius:14px;padding:14px;margin-bottom:10px}
+.btn{background:var(--ac);color:var(--acx);border:0;border-radius:12px;padding:12px 16px;font:700 15px inherit;font-family:inherit;cursor:pointer;width:100%}
+.btn.sm{width:auto;padding:7px 13px;font-size:13px;border-radius:9px}
+.btn.ghost{background:transparent;border:1.5px solid var(--ln);color:var(--tx)}
+input[type=text],input[type=email],input[type=password],select{width:100%;padding:12px;border-radius:12px;border:1.5px solid var(--ln);background:var(--sf);color:var(--tx);font:inherit;margin-bottom:10px}
+label.mu{display:block;margin-bottom:3px}
+.row{display:flex;align-items:center;gap:10px}
+.sp{flex:1;min-width:0}
+.mu{color:var(--mu);font-size:13px}
+.av{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#14181f;flex:none}
+.tag{font-size:12px;background:var(--bg);border-radius:6px;padding:2px 7px;color:var(--mu)}
+.chip{display:inline-block;background:var(--ac);color:var(--acx);border-radius:9px;padding:6px 10px;font-size:13px;font-weight:700;text-decoration:none;margin:8px 6px 0 0}
+#map{position:absolute;inset:0;z-index:1}
+.pin{position:relative;width:30px;height:30px;border-radius:50%;border:3px solid #14181f;display:grid;place-items:center;font:800 13px sans-serif;color:#14181f}
+.vb{position:absolute;right:-10px;bottom:-10px;font-size:13px;line-height:1}
+.hud{position:absolute;left:12px;right:12px;top:12px;z-index:500;display:flex;flex-direction:column;gap:8px}
+.pill{background:var(--sf);border:1px solid var(--ln);border-radius:14px;padding:9px 12px;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+.xpbar{height:6px;background:var(--ln);border-radius:3px;overflow:hidden;flex:1}
+.xpbar i{display:block;height:100%;background:var(--ac)}
+.sw{position:relative;width:46px;height:26px;border-radius:13px;background:var(--ln);border:0;cursor:pointer;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s}
+.sw.on{background:var(--ac)}.sw.on::after{left:23px}
+#go{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);z-index:500;width:84px;height:84px;border-radius:50%;border:0;background:var(--ac);color:var(--acx);font:800 24px Georgia,serif;box-shadow:0 6px 18px rgba(0,0,0,.3);cursor:pointer}
+#go.run{background:#e5484d;color:#fff;font-size:15px}
+#stat,#sheet{position:absolute;left:12px;right:12px;bottom:118px;z-index:500}
+#sheet{display:none}
+.seg{display:flex;background:var(--sf);border:1px solid var(--ln);border-radius:12px;padding:3px;margin-bottom:12px}
+.seg button{flex:1;border:0;background:none;padding:8px;border-radius:9px;font:inherit;color:var(--mu);cursor:pointer}
+.seg button.on{background:var(--ac);color:var(--acx);font-weight:700}
+.rank{width:26px;text-align:center;font-weight:800;color:var(--mu)}
+#toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:var(--tx);color:var(--bg);padding:9px 14px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:3000;max-width:92%;text-align:center}
+#toast.on{opacity:1}
+.fab{position:absolute;z-index:500;width:46px;height:46px;border-radius:50%;border:1px solid var(--ln);background:var(--sf);color:var(--tx);font-size:20px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.2)}
+#sos{left:12px;bottom:34px}#addp{right:12px;bottom:34px}#rt{right:12px;bottom:90px}
+.sg{width:34px;height:34px;border-radius:50%;background:#fff;border:3px solid #e5484d;display:grid;place-items:center;font-size:18px;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.fl{display:flex;gap:6px;overflow-x:auto}
+.fl button{flex:none;border:1.5px solid var(--ln);background:var(--sf);color:var(--tx);border-radius:999px;padding:4px 10px;font:inherit;font-size:13px;cursor:pointer}
+.fl button.on{background:var(--ac);color:var(--acx);border-color:var(--ac);font-weight:700}
+.bar{height:8px;background:var(--ln);border-radius:4px;overflow:hidden;margin:6px 0}.bar i{display:block;height:100%;background:var(--ac)}
+.bd{display:inline-block;margin:0 6px 6px 0;padding:5px 9px;border-radius:9px;background:var(--bg);font-size:13px;opacity:.45}.bd.on{opacity:1;background:var(--ac);color:var(--acx);font-weight:700}
+.pn{font-size:22px;line-height:1;text-align:center}
+textarea,input[type=datetime-local]{width:100%;padding:12px;border-radius:12px;border:1.5px solid var(--ln);background:var(--sf);color:var(--tx);font:inherit;margin-bottom:10px}
+</style>
+</head>
+<body>
+<div class="full" id="auth" style="display:block"><div>
+ <h1>Ride Clans</h1>
+ <p class="mu" style="margin-bottom:16px">Trouve des riders près de toi et rejoins un clan.</p>
+ <input type="email" id="em" placeholder="Email" autocomplete="email" aria-label="Email">
+ <input type="password" id="pw" placeholder="Mot de passe (6 caractères min.)" autocomplete="current-password" aria-label="Mot de passe">
+ <div class="row"><button class="btn" id="li">Se connecter</button><button class="btn ghost" id="su">Créer un compte</button></div>
+ <p class="mu" style="margin-top:14px"><a href="privacy.html" style="color:var(--mu)">Politique de confidentialité</a></p>
+ <p class="mu"><a href="#" id="tst" style="color:var(--mu)">Tester la connexion</a></p>
+</div></div>
+<div class="full" id="reg"><div></div></div>
+<div class="full" id="modal"><div></div></div>
+<div class="full" id="picker" style="z-index:2500"><div><h1>Choisir le lieu</h1><div class="row" style="margin-bottom:8px"><input type="text" id="qs" placeholder="Chercher une adresse ou un lieu" style="margin:0"><button class="btn sm" id="qb">OK</button></div><div id="pmap" style="height:48vh;border-radius:12px;margin-bottom:8px"></div><p class="mu" style="margin-bottom:10px">Appuie sur la carte ou fais glisser le repère 📍, puis valide.</p><button class="btn" id="pv">Valider ce lieu</button><button class="btn ghost" id="pg" style="margin-top:8px">Utiliser ma position</button><button class="btn ghost" id="pc" style="margin-top:8px">Annuler</button></div></div>
+<div id="app">
+<main>
+ <section class="pg on" id="pg-map">
+  <div id="map"></div>
+  <div class="hud">
+   <div class="pill row"><span class="mu" style="font-size:12px">Niv. <b id="lvl" style="color:var(--tx)">1</b></span><div class="xpbar"><i id="xpb"></i></div><span class="mu" id="xpt"></span></div>
+   <div class="pill row"><div class="sp"><b>Je suis visible</b><div class="mu" id="vtxt"></div></div><button class="sw on" id="vis" role="switch" aria-checked="true" aria-label="Visible sur la carte"></button></div>
+  </div>
+  <div id="stat" class="pill"></div>
+  <div id="sheet" class="pill"></div>
+  <button id="go">GO</button>
+  <button class="fab" id="sos" aria-label="Sécurité : SOS et partage de position">🆘</button><button class="fab" id="addp" aria-label="Ajouter un point sur la carte">＋</button><button class="fab" id="rt" aria-label="Itinéraire">🧭</button>
+ </section>
+ <section class="pg" id="pg-ev"></section>
+ <section class="pg" id="pg-clans"></section>
+ <section class="pg" id="pg-rank"></section>
+ <section class="pg" id="pg-me"></section>
+</main>
+<nav>
+ <button class="on" data-p="map"><b>🗺</b>Carte</button>
+ <button data-p="ev"><b>📅</b>Sorties</button>
+ <button data-p="clans"><b>🛡</b>Clans<span id="nb"></span></button>
+ <button data-p="rank"><b>🏆</b>Classement</button>
+ <button data-p="me"><b>👤</b>Profil</button>
+</nav>
+</div>
+<div id="toast"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const COLORS=["#ffc933","#7fd6a8","#ff9b8a","#8fb8ff","#d3a6ff","#ffb86b"];
+const colOf=id=>{const r=riders.find(x=>x.id===id),c=(id===uid&&me.col)?me.col:(r&&r.col);return (/^#[0-9a-fA-F]{6}$/.test(c||"")?c:"")||COLORS[[...String(id)].reduce((a,c2)=>a+c2.charCodeAt(0),0)%6]};
+const STALE=5*60*1000,lvlOf=x=>Math.floor(x/150)+1,age=r=>Date.now()-Date.parse(r.t);
+const CT=[["sn","Snapchat","pseudo","https://www.snapchat.com/add/"],["wa","WhatsApp","+33612345678","https://wa.me/"],["tel","Téléphone (SMS)","+33612345678","sms:"],["ig","Instagram","pseudo","https://instagram.com/"],["tg","Telegram","pseudo","https://t.me/"],["tt","TikTok","pseudo","https://www.tiktok.com/@"],["dc","Discord","pseudo (pas de lien)",""]];
+const CC=[["wa","Groupe WhatsApp","https://chat.whatsapp.com/…"],["dc","Discord","https://discord.gg/…"],["tg","Telegram","https://t.me/…"],["sn","Snapchat du chef","pseudo"]];
+const VEH={trot:["🛴","Trottinette"],trote:["🛴⚡","Trottinette électrique"],velo:["🚲","Vélo"],velo_e:["🚲⚡","Vélo électrique"],moto:["🏍️","Moto"],scooter:["🛵","Scooter"]};
+function link(k,v){v=String(v||"").trim();const d=CT.find(c=>c[0]===k);if(!v||!d)return"";const x=k==="wa"?v.replace(/\D/g,""):k==="tel"?v.replace(/[^\d+]/g,""):encodeURIComponent(v.replace(/^@/,""));return x?d[3]+x:""}
+function clink(k,v){v=String(v||"").trim();if(!v)return"";if(k==="sn")return "https://www.snapchat.com/add/"+encodeURIComponent(v.replace(/^@/,""));
+ return /^https:\/\/(chat\.whatsapp\.com|discord\.gg|discord\.com\/invite|t\.me)\/[\w\-\/.?=&]+$/i.test(v)?v:""}
+function chips(ct,list,fn){return ct?list.filter(c=>ct[c[0]]).map(c=>{if(fn===link&&c[0]==="dc")return `<span class="chip">Discord · ${esc(ct.dc)}</span>`;const u=fn(c[0],ct[c[0]]);if(!u)return"";const v=String(ct[c[0]]);return `<a class="chip" href="${u}" target="_blank" rel="noopener noreferrer">${c[1]}${/^https?:/.test(v)?"":" · "+esc(v)}</a>`}).join(""):""}
+function toast(t){const e=$("#toast");e.textContent=t;e.classList.add("on");clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove("on"),3200)}
+const fail=e=>{console.error(e);toast("Action refusée ou erreur réseau")};
+const chk=({error})=>{if(error)fail(error)};
+function hav(a,b){const R=6371000,r=Math.PI/180,dl=(b.lat-a.lat)*r,dn=(b.lng-a.lng)*r,x=Math.sin(dl/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
+
+const CFG=window.SB||{};CFG.url=String(CFG.url||"").replace(/[^\x21-\x7E]/g,"").replace(/\/+$/,"");CFG.key=String(CFG.key||"").replace(/[^\x21-\x7E]/g,"");const cfgOk=CFG.url&&CFG.key&&!/COLLE/.test(CFG.url+CFG.key);
+const sb=cfgOk?supabase.createClient(CFG.url,CFG.key):null;
+let uid=null,pos=null,watching=false,riding=false,lastW=0,page="map",riders=[],clans=[],reqs=[],started=false,prevN=0,geoErr="";
+let me={n:"",v:"trot",g:"",km:0,sos:"",img:"",col:"",xp:0,clan:"",cn:"",vis:true,ct:{},share:true,reg:false};
+const reqIn=()=>reqs.filter(r=>r.st==="pending"&&((r.k==="inv"&&r.tu===uid)||(r.k==="join"&&can("req",r.c)))),reqOut=()=>reqs.filter(r=>r.f===uid);
+
+/* ---------- connexion par email ---------- */
+const errMsg=e=>{const m=e&&e.message||"";return /already/i.test(m)?"Cet email a déjà un compte : appuie sur Se connecter":/invalid login/i.test(m)?"Email ou mot de passe incorrect":/at least 6/i.test(m)?"Mot de passe trop court (6 caractères min.)":/valid email|invalid format/i.test(m)?"Email invalide":/not confirmed/i.test(m)?"Confirme d'abord ton email":/rate limit/i.test(m)?"Trop d'essais, réessaie dans quelques minutes":/fetch|network/i.test(m)?"Connexion impossible ("+m.slice(0,70)+"). Appuie sur « Tester la connexion » en bas.":m||"Erreur de connexion"};
+async function doAuth(up){
+ if(!sb)return toast("config.js n'est pas rempli");
+ const email=$("#em").value.trim(),password=$("#pw").value;if(!email||!password)return toast("Entre un email et un mot de passe");
+ try{const r=up?await sb.auth.signUp({email,password}):await sb.auth.signInWithPassword({email,password});
+  if(r.error)return toast(errMsg(r.error));
+  if(up&&!r.data.session)toast("Compte créé. Confirme ton email, puis connecte-toi.");
+ }catch(e){toast(errMsg(e))}
+}
+$("#li").onclick=()=>doAuth(false);$("#su").onclick=()=>doAuth(true);
+$("#tst").onclick=async e=>{e.preventDefault();if(!sb)return toast("config.js n'est pas rempli");
+ try{const r=await fetch(CFG.url+"/auth/v1/health",{headers:{apikey:CFG.key}});toast("Serveur joint : HTTP "+r.status+" "+(await r.text()).slice(0,100))}catch(err){toast("Échec : "+(err&&err.message||err)+" | url="+CFG.url.slice(0,30)+"… clé="+CFG.key.length+" car.")}};
+if(!sb)toast("config.js n'est pas rempli");
+else sb.auth.onAuthStateChange((ev,s)=>setTimeout(()=>onUser(s&&s.user),0));
+async function onUser(u){
+ if(!u){uid=null;started=false;me.reg=false;$("#app").style.display="none";$("#reg").style.display="none";$("#auth").style.display="block";return}
+ if(uid===u.id&&started)return;
+ uid=u.id;$("#auth").style.display="none";
+ try{
+  const [a,b]=await Promise.all([sb.from("profiles").select("*").eq("id",uid).maybeSingle(),sb.from("priv").select("*").eq("id",uid).maybeSingle()]);
+  if(a.data){const d=a.data;me.km=d.km||0;me.g=d.g||"";me.img=safeImg(d.img);me.col=safeCol(d.col);me.n=d.n||"";me.v=VEH[d.v]?d.v:"trot";me.xp=d.xp||0;me.clan=d.clan||"";me.cn=d.cn||"";me.vis=d.vis!==false}
+  if(b.data){me.sos=b.data.sos||"";me.ct=b.data.ct||{};me.share=b.data.share!==false;me.reg=true}
+ }catch(e){fail(e)}
+ if(me.reg)start();else showReg();
+}
+
+/* ---------- inscription et profil ---------- */
+function formHtml(btn,age){return `<label class="mu">Pseudo</label><input type="text" id="f-n" value="${esc(me.n)}" maxlength="20"><label class="mu">Mon véhicule</label><select id="f-v">${Object.entries(VEH).map(([k,v])=>`<option value="${k}" ${me.v===k?"selected":""}>${v[0]} ${v[1]}</option>`).join("")}</select>${lookHtml()}<label class="mu">Mon modèle (garage)</label><input type="text" id="f-g" value="${esc(me.g)}" placeholder="ex : Zedos Z1, Xiaomi 4 Pro…" maxlength="40"><div class="mu" style="margin:6px 0 10px"><b style="color:var(--tx)">Où les autres peuvent te contacter</b><br>Remplis les réseaux que tu utilises. <b style="color:var(--tx)">Au moins un numéro de téléphone est obligatoire</b> (WhatsApp ou Téléphone).</div>`+CT.map(c=>`<label class="mu">${c[1]}</label><input type="text" id="f-${c[0]}" value="${esc(me.ct[c[0]]||"")}" placeholder="${c[2]}" maxlength="40">`).join("")+`<label class="mu">Numéro SOS (privé, utilisé par le bouton 🆘)</label><input type="text" id="f-sos" value="${esc(me.sos)}" placeholder="+33612345678" maxlength="20"><label class="row" style="margin-bottom:12px"><input type="checkbox" id="f-s" ${me.share?"checked":""}><span class="mu sp">Afficher mes contacts aux riders qui appuient sur mon profil (visibles par tous les utilisateurs connectés).</span></label>`+(age?`<label class="row" style="margin-bottom:12px"><input type="checkbox" id="f-a"><span class="mu sp">J'ai 16 ans ou plus et j'accepte la <a href="privacy.html" target="_blank" style="color:var(--mu)">politique de confidentialité</a>.</span></label>`:"")+`<button class="btn" id="f-b">${btn}</button>`}
+const phoneOk=v=>{v=String(v||"");const n=v.replace(/\D/g,"");return /^\+?[\d\s.\-()]+$/.test(v)&&n.length>=8&&n.length<=15};
+function formError(){const w=me.ct.wa,t=me.ct.tel;
+ if(!w&&!t)return "Ajoute au moins un numéro de téléphone (WhatsApp ou Téléphone)";
+ if(w&&!phoneOk(w))return "Numéro WhatsApp invalide (ex : +33612345678)";
+ if(t&&!phoneOk(t))return "Numéro de téléphone invalide (ex : +33612345678)";
+ if(me.sos&&!phoneOk(me.sos))return "Numéro SOS invalide (ex : +33612345678)";return ""}
+function readForm(){me.n=$("#f-n").value.trim();me.v=$("#f-v").value;me.g=$("#f-g").value.trim();me.sos=$("#f-sos").value.trim();CT.forEach(c=>me.ct[c[0]]=$("#f-"+c[0]).value.trim());me.share=$("#f-s").checked}
+async function saveProfile(){await Promise.all([push(true),sb.from("priv").upsert({id:uid,ct:me.ct,share:me.share,sos:me.sos}).then(chk)])}
+function showReg(){
+ const r=$("#reg");r.style.display="block";
+ r.firstElementChild.innerHTML=`<h1>Crée ton profil</h1><p class="mu" style="margin-bottom:14px">Choisis un pseudo, ton véhicule et comment les autres peuvent te contacter. Les contacts sont facultatifs.</p>`+formHtml("Créer mon profil",true)+`<button class="btn ghost" id="lo" style="margin-top:10px">Se déconnecter</button>`;
+ $("#lo").onclick=()=>sb.auth.signOut();
+ $("#f-b").onclick=async()=>{readForm();if(!me.n)return toast("Choisis un pseudo");{const er=formError();if(er)return toast(er)}if(!$("#f-a").checked)return toast("Tu dois accepter pour continuer");
+  me.reg=true;await saveProfile();r.style.display="none";start()};
+}
+function renderMe(){
+ $("#pg-me").innerHTML=`<h1>Profil</h1>${statsHtml()}<div class="card"><div class="mu" style="margin-bottom:10px">Niveau ${lvlOf(me.xp)} · ${Math.round(me.xp)} XP · ${me.clan?"Clan "+esc(me.cn):"Pas de clan"}</div>${formHtml("Enregistrer")}</div><button class="btn ghost" id="lo">Se déconnecter</button><p class="mu" style="margin-top:12px"><a href="privacy.html" style="color:var(--mu)">Politique de confidentialité</a></p>`;
+ $("#f-b").onclick=async()=>{readForm();if(!me.n)return toast("Choisis un pseudo");{const er=formError();if(er)return toast(er)}await saveProfile();toast("Profil enregistré");renderMe()};bindStats();
+ $("#lo").onclick=()=>sb.auth.signOut();
+}
+
+/* ---------- données partagées ---------- */
+function push(force){
+ if(!uid||!me.reg)return Promise.resolve();const now=Date.now();if(!force&&now-lastW<6000)return Promise.resolve();lastW=now;const show=me.vis&&pos;
+ return sb.from("profiles").upsert({id:uid,n:me.n,v:me.v,g:me.g,img:me.img||null,col:me.col||null,km:Math.round(me.km*10)/10,lat:show?pos.lat:null,lng:show?pos.lng:null,xp:Math.round(me.xp),clan:me.clan||null,cn:me.cn||null,vis:me.vis,ct:me.share?me.ct:null,t:new Date().toISOString()}).then(chk);
+}
+function live(table,cb){
+ const m=new Map(),out=()=>cb([...m.values()]);
+ sb.from(table).select("*").then(({data})=>{(data||[]).forEach(r=>m.set(r.id,r));out()});
+ sb.channel("rt-"+table).on("postgres_changes",{event:"*",schema:"public",table},p=>{if(p.eventType==="DELETE")m.delete(p.old.id);else m.set(p.new.id,p.new);out()}).subscribe();
+}
+function start(){
+ $("#app").style.display="flex";map.invalidateSize();hud();
+ if(started)return;started=true;
+ live("profiles",a=>{riders=a;drawMarkers();if(page==="map")hud();if(page==="clans"){if(me.clan)renderMine();renderList();renderRes()}});
+ live("clans",a=>{clans=a;fltUI();syncClan();if(page==="clans"){if(me.clan)renderMine();renderList()}});
+ live("requests",a=>{reqs=a;const n=reqIn().length;$("#nb").textContent=n?" ("+n+")":"";if(n>prevN)toast("Nouvelle demande de clan");prevN=n;
+  reqOut().filter(r=>r.k==="join"&&r.st==="accepted"&&!handled.has(r.id)).forEach(async r=>{handled.add(r.id);if(!me.clan)await joinClan(r.c,r.cn);sb.from("requests").update({st:"done"}).eq("id",r.id).then(()=>{})});
+  if(page==="clans"){renderReqs();renderList();renderRes()}});
+ live("members",a=>{mrows=a;syncClan();if(page==="clans"){if(me.clan)renderMine();renderList();renderInv();renderRoster();renderReqs()}});
+ live("alerts",a=>{alerts=a;drawPins();checkAlerts()});
+ live("pins",a=>{pins=a;drawPins()});
+ live("events",a=>{events=a;drawPins();if(page==="ev")renderEv()});
+ live("rsvps",a=>{rsvps=a;if(page==="ev")renderEv()});
+ live("ads",a=>{ads=a;if(page==="ev")renderEv()});
+ try{navigator.permissions.query({name:"geolocation"}).then(r=>{if(r.state==="granted")startGeo()})}catch(e){}
+ setInterval(()=>{if(pos)push();if(page==="map")hud()},8000);
+ if(!LSget("rc_tour",0))setTimeout(offerTour,1500);
+}
+
+/* ---------- carte ---------- */
+const map=L.map("map",{zoomControl:false}).setView([46.6,2.4],5);
+L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(map);
+let mk={},meM=null;
+const near=()=>riders.filter(r=>r.id!==uid&&r.vis!==false&&r.lat!=null&&age(r)<STALE&&(!pos||hav(pos,r)<radiusKm*1000)&&(F.v==="all"||r.v===F.v)&&(!F.clan||!me.clan||r.clan===me.clan));
+const ic=r=>L.divIcon({className:"",html:`<div class="pin" style="background:${colOf(r.id)};${bgImg(r.img)}">${safeImg(r.img)?"":esc((r.n||"?")[0].toUpperCase())}<span class="vb">${VEH[r.v]?VEH[r.v][0]:"🛴"}</span></div>`,iconSize:[30,30],iconAnchor:[15,15]});
+function drawMarkers(){
+ const keep=new Set();
+ near().forEach(r=>{keep.add(r.id);let m=mk[r.id];if(!m){m=mk[r.id]=L.marker([r.lat,r.lng],{icon:ic(r)}).addTo(map).on("click",()=>openSheet(mk[r.id]._r))}m.setLatLng([r.lat,r.lng]);m._r=r;const k=(r.col||"")+(r.img?r.img.length:0)+(r.v||"")+(r.n||"");if(m._k!==k){m.setIcon(ic(r));m._k=k}});
+ Object.keys(mk).forEach(id=>{if(!keep.has(id)){map.removeLayer(mk[id]);delete mk[id]}});
+}
+function hud(){
+ $("#lvl").textContent=lvlOf(me.xp);$("#xpb").style.width=(me.xp%150)/150*100+"%";$("#xpt").textContent=Math.floor(me.xp%150)+" / 150 XP";
+ const v=$("#vis");v.classList.toggle("on",me.vis);v.setAttribute("aria-checked",me.vis);
+ $("#vtxt").textContent=me.vis?"Les riders proches te voient":"Ta position n'est pas partagée";
+ const s=$("#stat");
+ if(!watching)s.innerHTML=`<div class="row"><div class="sp"><b>Autorise la localisation</b><div class="mu">${esc(geoErr)||"Pour te voir sur la carte et voir les riders proches."}</div></div><button class="btn sm" id="geo">Autoriser</button></div>`;
+ else if(!pos)s.innerHTML=`<div class="mu">Recherche de ta position…</div>`;
+ else{const n=near().length;s.innerHTML=`<div class="mu">${n?n+" rider"+(n>1?"s":"")+" autour de toi. Appuie sur l'un d'eux pour le contacter.":"Aucun autre rider autour de toi pour l'instant. Invite tes amis !"}</div>`}
+ s.style.display=$("#sheet").style.display==="block"?"none":"block";
+ if($("#geo"))$("#geo").onclick=startGeo;fltUI();
+}
+function startGeo(){
+ if(!navigator.geolocation){geoErr="La géolocalisation n'est pas disponible sur cet appareil.";return hud()}
+ geoErr="";watching=true;hud();
+ navigator.geolocation.watchPosition(p=>{
+  const n={lat:p.coords.latitude,lng:p.coords.longitude};
+  if(riding&&pos){const d=hav(pos,n);if(d>3&&d<300){me.xp+=d/40;me.km+=d/1000;trip.d+=d}}
+  const first=!pos;pos=n;if(riding)addMet();if(gp.on)navTick();
+  if(!meM)meM=L.circleMarker([n.lat,n.lng],{radius:9,color:"#14181f",weight:3,fillColor:safeCol(me.col)||"#ffc933",fillOpacity:1}).addTo(map);else meM.setLatLng([n.lat,n.lng]);
+  if(first)map.setView([n.lat,n.lng],15);
+  push();hud();drawMarkers();
+ },e=>{watching=false;geoErr=e.code===1?"Autorisation refusée. Autorise la localisation dans les réglages du navigateur.":"Position indisponible. Vérifie que le GPS est activé.";hud()},{enableHighAccuracy:true,maximumAge:3000,timeout:20000});
+}
+function openSheet(r){
+ const s=$("#sheet"),can=r.clan&&me.clan!==r.clan,ch=chips(r.ct,CT,link);
+ s.innerHTML=`<div class="row">${av(r)}<div class="sp"><b>${esc(r.n)}</b> <span class="tag">Niv. ${lvlOf(r.xp||0)}</span><div class="mu">${VEH[r.v]?VEH[r.v][0]+" "+VEH[r.v][1]+" · ":""}${r.clan?"Clan "+esc(r.cn):"Sans clan"}${pos?" · à "+Math.round(hav(pos,r))+" m":""}</div></div><button class="btn sm ghost" id="cl" aria-label="Fermer">✕</button></div>${r.g?`<div class="mu" style="margin-top:6px">🔧 ${esc(r.g)} · ${Math.round(r.km||0)} km</div>`:""}<div class="mu" style="margin-top:10px"><b style="color:var(--tx)">Le contacter</b></div><div>${ch||'<span class="mu">Ce rider n\'a pas partagé de contact.</span>'}</div>${can?'<button class="btn sm" id="jn" style="margin-top:10px">Demander à rejoindre</button>':""}`;
+ s.style.display="block";hud();
+ $("#cl").onclick=()=>{s.style.display="none";hud()};
+ if(can)$("#jn").onclick=()=>{requestJoin(r.clan,r.cn);$("#cl").click()};
+}
+map.on("click",()=>{$("#sheet").style.display="none";hud()});
+$("#vis").onclick=()=>{me.vis=!me.vis;push(true);hud();toast(me.vis?"Tu es visible":"Tu es invisible")};
+$("#go").onclick=()=>{riding=!riding;const b=$("#go");b.classList.toggle("run",riding);b.textContent=riding?"STOP":"GO";
+ if(riding){trip={d:0,t0:Date.now()};keepAwake(true);if(!watching)startGeo();toast("Bonne route ! L'XP augmente avec la distance parcourue")}else{endTrip();keepAwake(gp.on)}};
+
+/* ---------- clans, demandes, invitations ---------- */
+const members=id=>riders.filter(r=>r.clan===id);
+const rid=(k,c,f,t)=>[k,c,f,t].join("_");
+const pend=(k,c,to)=>reqOut().some(r=>r.k===k&&r.c===c&&r.tu===to&&r.st==="pending");
+async function joinClan(id,name,role){
+ const r=await sb.from("members").insert({clan:id,u:uid,role:role||"membre"});
+ if(r.error){fail(r.error);return false}
+ mrows=mrows.concat([{id:"tmp"+Date.now(),clan:id,u:uid,role:role||"membre"}]);
+ me.clan=id;me.cn=name;push(true);toast("Tu as rejoint "+name);
+ if(page==="clans"){renderMine();renderList();renderInv();renderRoster()}return true;
+}
+async function leaveClan(){
+ if(myRole()==="chef"){if(!confirm("Tu es le chef : supprimer le clan le supprime pour tous ses membres. Continuer ?"))return;
+  const r=await sb.from("clans").delete().eq("id",me.clan);if(r.error)return fail(r.error);toast("Clan supprimé");return}
+ const r=await sb.from("members").delete().eq("clan",me.clan).eq("u",uid);if(r.error)return fail(r.error);toast("Tu as quitté le clan");
+}
+function sendReq(row,msg){sb.from("requests").upsert({...row,st:"pending",t:new Date().toISOString()}).then(r=>{if(r.error)fail(r.error);else toast(msg)})}
+function requestJoin(cid,name){
+ if(me.clan)return toast("Quitte d'abord ton clan pour en rejoindre un autre");
+ sendReq({id:rid("join",cid,uid,"clan"),k:"join",c:cid,cn:name,f:uid,fn:me.n,tu:null},"Demande envoyée à "+name);
+}
+function invite(r){
+ if(!can("inv")||!r)return;
+ sendReq({id:rid("inv",me.clan,uid,r.id),k:"inv",c:me.clan,cn:me.cn,f:uid,fn:me.n,tu:r.id,tn:r.n},"Invitation envoyée à "+r.n);
+}
+async function answer(r,ok){
+ if(!r)return;
+ if(ok&&r.k==="inv"&&me.clan)return toast("Quitte d'abord ton clan pour accepter");
+ const e=await sb.from("requests").update({st:ok?"accepted":"declined"}).eq("id",r.id);if(e.error)return fail(e.error);
+ if(ok&&r.k==="inv"){await joinClan(r.c,r.cn);sb.from("requests").update({st:"done"}).eq("id",r.id).then(()=>{})}
+ toast(ok?"Accepté":"Refusé");
+}
+function renderClans(){
+ $("#pg-clans").innerHTML=`<h1>Clans</h1><div id="reqs"></div><div id="mine"></div><div id="roster"></div><div id="inv"></div><div class="mu" style="margin:14px 0 8px">Tous les clans</div><input type="text" id="sr" placeholder="Rechercher un clan" aria-label="Rechercher un clan"><div id="clist"></div>`;
+ $("#sr").oninput=renderList;renderReqs();renderMine();renderRoster();renderInv();renderList();
+}
+function renderReqs(){
+ const p=$("#reqs");if(!p)return;const a=reqIn();
+ p.innerHTML=a.length?`<div class="mu" style="margin-bottom:8px">Demandes reçues</div>`+a.map(r=>`<div class="card"><b>${esc(r.fn)}</b> ${r.k==="inv"?"t'invite à rejoindre":"veut rejoindre"} <b>${esc(r.cn)}</b><div class="row" style="margin-top:10px"><button class="btn sm" data-a="${esc(r.id)}">Accepter</button><button class="btn sm ghost" data-r="${esc(r.id)}">Refuser</button></div></div>`).join(""):"";
+ p.querySelectorAll("[data-a]").forEach(b=>b.onclick=()=>answer(reqs.find(r=>r.id===b.dataset.a),true));
+ p.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>answer(reqs.find(r=>r.id===b.dataset.r),false));
+}
+function renderMine(){
+ const p=$("#mine");if(!p)return;
+ if(me.clan){const c=clans.find(c=>c.id===me.clan);
+  p.innerHTML=`<div class="card"><div class="row"><div class="av" style="background:var(--ac)">🛡</div><div class="sp"><b>${esc(me.cn)}</b><div class="mu">${ROLES[myRole()]||""} · ${members(me.clan).length} membre(s)</div></div><button class="btn sm ghost" id="lv">${myRole()==="chef"?"Supprimer":"Quitter"}</button></div><div>${chips(c&&c.ct,CC,clink)||'<span class="mu">Ce clan n\'a pas encore de lien de groupe.</span>'}</div>${c&&c.o===uid?`<button class="btn sm" id="lb" style="margin-top:10px">${c.live?"Arrêter la balade":"🛡 Lancer une balade du clan"}</button>`:""}${c&&c.live?'<div class="mu" style="margin-top:8px">Balade en cours : les membres visibles apparaissent sur la carte.</div>':""}</div>`;
+  $("#lv").onclick=leaveClan;if($("#lb"))$("#lb").onclick=()=>sb.from("clans").update({live:!c.live}).eq("id",c.id).then(chk);
+ }else{
+  p.innerHTML=`<div class="card"><b>Crée ton clan</b><p class="mu" style="margin:4px 0 12px">Ajoute un lien de groupe pour que les riders puissent discuter avec toi.</p><input type="text" id="cn" placeholder="Nom de ton clan" maxlength="24" aria-label="Nom du clan">${CC.map(c=>`<label class="mu">${c[1]} (facultatif)</label><input type="text" id="c-${c[0]}" placeholder="${c[2]}" maxlength="100">`).join("")}<button class="btn" id="cc">Créer un clan</button></div>`;
+  $("#cc").onclick=async()=>{const n=$("#cn").value.trim();if(!n)return toast("Donne un nom à ton clan");
+   const ct={};let bad="";CC.forEach(c=>{const v=$("#c-"+c[0]).value.trim();if(v){if(!clink(c[0],v))bad=c[1];else ct[c[0]]=v}});
+   if(bad)return toast("Lien invalide pour : "+bad);
+   const r=await sb.from("clans").insert({n,o:uid,ct}).select().single();
+   if(r.error)return fail(r.error);joinClan(r.data.id,n,"chef")};
+ }
+}
+function renderInv(){
+ const p=$("#inv");if(!p)return;if(!me.clan){p.innerHTML="";return}
+ p.innerHTML=`<div class="card"><b>Inviter un rider</b><p class="mu" style="margin:4px 0 10px">Cherche un pseudo et envoie une invitation à rejoindre ${esc(me.cn)}.</p><input type="text" id="ip" placeholder="Pseudo du rider" maxlength="20" aria-label="Pseudo du rider" style="margin-bottom:6px"><div id="ires"></div></div>`;
+ $("#ip").oninput=renderRes;
+}
+function renderRes(){
+ const p=$("#ires");if(!p)return;const q=$("#ip").value.trim().toLowerCase();if(!q){p.innerHTML="";return}
+ const a=riders.filter(r=>r.id!==uid&&r.clan!==me.clan&&(r.n||"").toLowerCase().includes(q)).slice(0,6);
+ p.innerHTML=a.length?a.map(r=>`<div class="row" style="margin-top:8px">${av(r)}<div class="sp"><b>${esc(r.n)}</b> <span class="tag">Niv. ${lvlOf(r.xp||0)}</span></div>${pend("inv",me.clan,r.id)?'<span class="tag">Invitation envoyée</span>':`<button class="btn sm" data-i="${esc(r.id)}">Inviter</button>`}</div>`).join(""):'<div class="mu" style="margin-top:8px">Aucun rider avec ce pseudo.</div>';
+ p.querySelectorAll("[data-i]").forEach(b=>b.onclick=()=>invite(riders.find(r=>r.id===b.dataset.i)));
+}
+function renderList(){
+ const p=$("#clist");if(!p)return;const q=($("#sr")?.value||"").toLowerCase();
+ const a=clans.filter(c=>c.n.toLowerCase().includes(q));
+ p.innerHTML=a.length?a.map(c=>`<div class="card"><div class="row"><div class="av" style="background:${colOf(c.id)}">${esc(c.n[0].toUpperCase())}</div><div class="sp"><b>${esc(c.n)}</b><div class="mu">${members(c.id).length} membre(s)</div></div>${me.clan===c.id?'<span class="tag">Ton clan</span>':pend("join",c.id,null)?'<span class="tag">Demande envoyée</span>':`<button class="btn sm" data-j="${c.id}">Demander</button>`}</div><div>${chips(c.ct,CC,clink)}</div></div>`).join(""):`<div class="mu">Aucun clan pour l'instant. Crée le premier !</div>`;
+ p.querySelectorAll("[data-j]").forEach(b=>b.onclick=()=>{const c=clans.find(c=>c.id===b.dataset.j);requestJoin(c.id,c.n)});
+}
+
+/* ---------- filtres, points, sorties, annonces, défis ---------- */
+let evDraft={title:"",d:"",v:"all",place:"",loc:null},F={v:"all",clan:false},pins=[],events=[],rsvps=[],ads=[],trip={d:0,t0:0},pm={},evTab="ev",evForm=false;
+const PK={danger:["⚠️","Danger"],parking:["🅿️","Parking"],borne:["🔌","Borne de recharge"],spot:["📍","Point de rencontre"],route:["⭐","Route conseillée"],radar:["📸","Radar"],police:["🚓","Contrôle de police"],pothole:["🕳️","Nid de poule"],works:["🚧","Travaux"],accident:["💥","Accident"],slippery:["🧊","Route glissante"],repair:["🔧","Atelier / réparation"],water:["🚰","Point d'eau"]};
+const day=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
+const LSget=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}};
+const LSset=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+const trips=()=>LSget("rc_trips",[]);
+const fmt=d=>new Date(d).toLocaleString("fr-FR",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+function gotoTab(p){document.querySelector('nav [data-p="'+p+'"]').click()}
+function fltUI(){
+ let el=$("#fl");if(!el){$(".hud").insertAdjacentHTML("beforeend",'<div id="fl"></div>');el=$("#fl")}
+ const c=clans.find(c=>c.id===me.clan),live=c&&c.live;
+ el.innerHTML=(live?`<div class="pill row" style="margin-bottom:8px"><div class="sp"><b>🛡 Balade du clan en cours</b></div><button class="btn sm" id="fc">Voir mon clan</button></div>`:"")+`<div class="fl">`+[["all","Tous"],...Object.entries(VEH).map(([k,v])=>[k,v[0]])].map(([k,l])=>`<button data-v="${k}" class="${F.v===k?"on":""}" aria-label="Filtre ${esc(k)}">${l}</button>`).join("")+(me.clan?`<button data-c="1" class="${F.clan?"on":""}">🛡 Mon clan</button>`:"")+`</div>`;
+ el.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{F.v=b.dataset.v;drawMarkers();hud()});
+ el.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{F.clan=!F.clan;drawMarkers();hud()});
+ if($("#fc"))$("#fc").onclick=()=>{F.clan=true;drawMarkers();hud()};
+}
+function showSheet(h){const s=$("#sheet");s.innerHTML=h;s.style.display="block";hud();$("#cl").onclick=()=>{s.style.display="none";hud()}}
+const pinIcon=(e,k)=>L.divIcon({className:"",html:`<div class="sg" style="border-color:${REDK.includes(k)?"#e5484d":"#1971c2"}">${e}</div>`,iconSize:[34,34],iconAnchor:[17,17]});
+function drawPins(){
+ const keep=new Set(),t=Date.now(),list=[];
+ pins.forEach(p=>{if(t-Date.parse(p.t)>(EXP[p.k]||Infinity))return;if(noCtl&&(p.k==="radar"||p.k==="police"))return;list.push({id:"p"+p.id,lat:p.lat,lng:p.lng,e:PK[p.k]?PK[p.k][0]:"📍",k:p.k,o:{pin:p}})});
+ events.forEach(e=>{if(Date.parse(e.at)<t-3*36e5)return;list.push({id:"e"+e.id,lat:e.lat,lng:e.lng,e:"📅",o:{ev:e}})});
+ alerts.forEach(a=>{if(a.clan!==me.clan||t-Date.parse(a.t)>2*36e5)return;list.push({id:"a"+a.id,lat:a.lat,lng:a.lng,e:"🆘",k:"danger",o:{al:a}})});
+ list.forEach(x=>{keep.add(x.id);let m=pm[x.id];if(!m){m=pm[x.id]=L.marker([x.lat,x.lng],{icon:pinIcon(x.e,x.k)}).addTo(map).on("click",()=>{const d=pm[x.id]._o;if(d.pin)pinSheet(d.pin);else if(d.al)alertSheet(d.al);else evSheet(d.ev)})}m._o=x.o});
+ Object.keys(pm).forEach(id=>{if(!keep.has(id)){map.removeLayer(pm[id]);delete pm[id]}});
+}
+function pinSheet(p){
+ const k=PK[p.k]||PK.spot;
+ showSheet(`<div class="row"><div class="sp"><b>${k[0]} ${k[1]}</b><div class="mu">${esc(p.n||"")}${p.r?" · "+"★".repeat(p.r)+"☆".repeat(5-p.r):""}</div><div class="mu">Ajouté par ${esc(p.un)}${EXP[p.k]?" · expire après "+(EXP[p.k]>=864e5?Math.round(EXP[p.k]/864e5)+" jour(s)":Math.round(EXP[p.k]/36e5)+" h"):""}</div></div>${p.u===uid?'<button class="btn sm ghost" id="dl">Supprimer</button>':""}<button class="btn sm ghost" id="cl" aria-label="Fermer">✕</button></div>`);
+ if(p.u===uid)$("#dl").onclick=()=>{sb.from("pins").delete().eq("id",p.id).then(chk);$("#cl").click()};
+}
+function evSheet(e){
+ const g=rsvps.filter(r=>r.e===e.id).length;
+ showSheet(`<div class="row"><div class="sp"><b>📅 ${esc(e.title)}</b><div class="mu">${e.place?"📍 "+esc(e.place)+" · ":""}${fmt(e.at)} · par ${esc(e.un)} · ${g} participant(s)</div></div><button class="btn sm ghost" id="cl" aria-label="Fermer">✕</button></div><button class="btn sm" id="eg" style="margin-top:10px">Voir les sorties</button>`);
+ $("#eg").onclick=()=>{$("#cl").click();gotoTab("ev")};
+}
+function modal(h){const m=$("#modal");m.style.display="block";m.firstElementChild.innerHTML=h;$("#px").onclick=closeModal}
+const closeModal=()=>{$("#modal").style.display="none"};
+const here=()=>pos||(()=>{const c=map.getCenter();return{lat:c.lat,lng:c.lng}})();
+$("#addp").onclick=()=>{
+ if(!me.clan)return toast("Rejoins ou crée un clan pour ajouter un point sur la carte");
+ modal(`<h1>Ajouter sur la carte</h1><p class="mu" style="margin-bottom:12px">${pos?"Le point sera placé à ta position.":"Le point sera placé au centre de la carte."}</p><label class="mu">Type</label><select id="pk">${Object.entries(PK).filter(([k])=>!(noCtl&&(k==="radar"||k==="police"))).map(([k,v])=>`<option value="${k}">${v[0]} ${v[1]}</option>`).join("")}</select><p class="mu" id="pwarn" style="display:none;margin-bottom:10px">⚠️ Signaler des radars ou des contrôles est réglementé dans certains pays (en France notamment). Vérifie la loi locale. Ces points disparaissent automatiquement.</p><label class="mu">Description</label><input type="text" id="pn" maxlength="60" placeholder="ex : trou profond sur la piste"><label class="mu">Note (pour les routes conseillées)</label><select id="pr"><option value="0">Pas de note</option>${[5,4,3,2,1].map(n=>`<option value="${n}">${"★".repeat(n)}</option>`).join("")}</select><button class="btn ghost" id="pl" style="margin-bottom:8px">📍 Choisir le lieu sur la carte</button><p class="mu" id="pls" style="margin-bottom:10px">Lieu : ${pos?"ta position":"centre de la carte"}</p><button class="btn" id="po">Ajouter</button><button class="btn ghost" id="px" style="margin-top:8px">Annuler</button>`);
+ $("#pk").onchange=()=>{$("#pwarn").style.display=["radar","police"].includes($("#pk").value)?"block":"none"};
+ let loc=null;$("#pl").onclick=()=>pickLocation(null,ll=>{loc=ll;$("#pls").textContent="✅ Lieu choisi sur la carte"});
+ $("#po").onclick=async()=>{const h=loc||here(),r=await sb.from("pins").insert({k:$("#pk").value,n:$("#pn").value.trim(),r:+$("#pr").value||null,lat:h.lat,lng:h.lng,u:uid,un:me.n});if(r.error)return fail(r.error);closeModal();toast("Point ajouté")};
+};
+const osm=()=>pos?`https://www.openstreetmap.org/?mlat=${pos.lat}&mlon=${pos.lng}#map=17/${pos.lat}/${pos.lng}`:"";
+function sosMenu(edit){
+ const ok=!edit&&me.sos&&phoneOk(me.sos);
+ modal(`<h1>Sécurité</h1>`+(ok?`<p class="mu" style="margin-bottom:12px">Contact SOS : <b style="color:var(--tx)">${esc(me.sos)}</b> · <a href="#" id="sch" style="color:var(--mu)">modifier</a></p>`:`<div class="card"><b>Configure ton contact SOS</b><p class="mu" style="margin:4px 0 10px">Entre le numéro d'une personne de confiance. Le bouton SOS lui enverra un SMS avec ta position.</p><input type="text" id="sn" inputmode="tel" placeholder="+33612345678" maxlength="20" value="${esc(me.sos)}"><button class="btn" id="ss">Enregistrer le contact SOS</button></div>`)+`<button class="btn" id="s1" style="background:#e5484d;color:#fff;margin-top:8px;${ok||me.clan?"":"opacity:.45"}">🆘 Envoyer mon SOS</button><button class="btn ghost" id="s2" style="margin-top:8px">📤 Partager ma position</button><button class="btn ghost" id="px" style="margin-top:8px">Fermer</button><p class="mu" style="margin-top:12px">${me.clan?"Ton SOS alerte tout ton clan avec ta position (ils la voient quand leur page est ouverte).":"Rejoins un clan pour alerter tes coéquipiers."} En cas d'urgence vitale, appelle le 112.</p>`);
+ if($("#sch"))$("#sch").onclick=e=>{e.preventDefault();sosMenu(true)};
+ if($("#ss"))$("#ss").onclick=()=>{const v=$("#sn").value.trim();if(!phoneOk(v))return toast("Numéro invalide (ex : +33612345678)");me.sos=v;sb.from("priv").upsert({id:uid,ct:me.ct,share:me.share,sos:me.sos}).then(chk);toast("Contact SOS enregistré");sosMenu(false)};
+ $("#s1").onclick=async()=>{
+  if(!pos)return toast("Position inconnue : active la localisation");
+  if(!me.clan&&!ok)return toast("Rejoins un clan ou enregistre un contact SOS");
+  if(!confirm("Envoyer ton SOS"+(me.clan?" à tout ton clan":"")+(ok?" et préparer un SMS pour "+me.sos:"")+" ?"))return;
+  if(me.clan){const r=await sb.from("alerts").insert({clan:me.clan,u:uid,un:me.n,lat:pos.lat,lng:pos.lng});if(r.error)toast("Alerte du clan non envoyée");else toast("Ton clan est alerté")}
+  if(ok)setTimeout(()=>{location.href="sms:"+me.sos.replace(/[^\d+]/g,"")+"?body="+encodeURIComponent("SOS ! J'ai besoin d'aide. Ma position : "+osm())},700);
+ };
+ $("#s2").onclick=()=>{if(!pos)return toast("Position inconnue");const t="Voici ma position : "+osm();if(navigator.share)navigator.share({title:"Ma position",text:t}).catch(()=>{});else if(navigator.clipboard)navigator.clipboard.writeText(t).then(()=>toast("Lien copié"))};
+}
+$("#sos").onclick=()=>sosMenu(false);
+/* trajets, défis, badges */
+function addMet(){const k="rc_met_"+day(),a=LSget(k,[]);let ch=false;near().forEach(r=>{if(!a.includes(r.id)){a.push(r.id);ch=true}});if(ch)LSset(k,a)}
+function endTrip(){
+ push(true);const min=Math.max(1,Math.round((Date.now()-trip.t0)/60000)),km=trip.d/1000;
+ if(km>=0.05){const T=trips();T.unshift({d:day(),t0:trip.t0,km:Math.round(km*100)/100,min});LSset("rc_trips",T.slice(0,100));toast(`Trajet : ${km.toFixed(2)} km · ${min} min · ${(km/(min/60)).toFixed(1)} km/h`)}else toast("Trajet terminé");
+}
+const todayKm=()=>trips().filter(t=>t.d===day()).reduce((s,t)=>s+t.km,0);
+const weekKm=()=>{const lim=Date.now()-7*864e5;return trips().filter(t=>t.t0>lim).reduce((s,t)=>s+t.km,0)};
+const claimKey=c=>c.id+"_"+(c.w?"w"+Math.floor(Date.now()/(7*864e5)):day());
+function badges(){
+ const T=trips(),night=T.some(t=>{const h=new Date(t.t0).getHours();return h>=22||h<5});
+ return [["🛴 Premier trajet",T.length>=1],["🛡 En clan",!!me.clan],["📏 50 km",me.km>=50],["📏 100 km",me.km>=100],["🌙 Rider de nuit",night],["⭐ Niveau 5",lvlOf(me.xp)>=5],["🏆 Niveau 10",lvlOf(me.xp)>=10],["📍 Contributeur",pins.some(p=>p.u===uid)],["📅 Organisateur",events.some(e=>e.u===uid)]];
+}
+function statsHtml(){
+ const T=trips(),cl=LSget("rc_claim",{});
+ return settingsHtml()+`<div class="card"><b>Mes stats</b><div class="mu" style="margin:4px 0">${Math.round(me.km*10)/10} km au total · ${T.length} trajet(s) enregistré(s)</div>${T.slice(0,3).map(t=>`<div class="mu">${t.d} · ${t.km} km · ${t.min} min · ${(t.km/(t.min/60)).toFixed(1)} km/h</div>`).join("")||'<div class="mu">Appuie sur GO pour enregistrer ton premier trajet.</div>'}</div>`
+ +`<div class="card"><b>Défis</b>`+chList().map(c=>{const v=Math.min(c.v(),c.g),k=claimKey(c);return `<div style="margin-top:10px">${esc(c.t)} <span class="tag">+${c.xp} XP</span><div class="bar"><i style="width:${v/c.g*100}%"></i></div><div class="row"><span class="mu sp">${Math.round(v*10)/10} / ${c.g}</span>${cl[k]?'<span class="tag">Récupéré</span>':v>=c.g?`<button class="btn sm" data-cl="${c.id}">Récupérer</button>`:""}</div></div>`}).join("")+`</div>`
+ +`<div class="card"><b>Badges</b><div style="margin-top:8px">`+badges().map(b=>`<span class="bd ${b[1]?"on":""}">${b[0]}</span>`).join("")+`</div></div>`;
+}
+function bindStats(){document.querySelectorAll("[data-cl]").forEach(b=>b.onclick=()=>{const c=chList().find(c=>c.id===b.dataset.cl),cl=LSget("rc_claim",{}),k=claimKey(c);if(cl[k]||c.v()<c.g)return;cl[k]=1;LSset("rc_claim",cl);me.xp+=c.xp;push(true);toast("+"+c.xp+" XP !");renderMe()})}
+/* sélecteur de lieu sur une carte */
+let pk2=null,pk2m=null;
+const pickIcon=L.divIcon({className:"",html:'<div class="pn" style="font-size:30px">📍</div>',iconSize:[30,30],iconAnchor:[15,28]});
+function setP(ll){if(!pk2m)pk2m=L.marker(ll,{draggable:true,icon:pickIcon}).addTo(pk2);else pk2m.setLatLng(ll)}
+function pickLocation(init,cb){
+ const ov=$("#picker");ov.style.display="block";
+ const c=map.getCenter(),start=init||(pos?{lat:pos.lat,lng:pos.lng}:{lat:c.lat,lng:c.lng});
+ if(!pk2){pk2=L.map("pmap");L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(pk2);pk2.on("click",e=>setP(e.latlng))}
+ pk2.setView([start.lat,start.lng],(init||pos)?16:Math.max(map.getZoom(),13));
+ setP(start);setTimeout(()=>pk2.invalidateSize(),60);
+ $("#pv").onclick=()=>{const ll=pk2m.getLatLng();ov.style.display="none";cb({lat:ll.lat,lng:ll.lng})};
+ $("#pc").onclick=()=>{ov.style.display="none"};
+ $("#pg").onclick=()=>{if(!pos)return toast("Position inconnue : active la localisation");setP({lat:pos.lat,lng:pos.lng});pk2.setView([pos.lat,pos.lng],17)};
+ const go=async()=>{const q=$("#qs").value.trim();if(!q)return;try{const r=await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&q="+encodeURIComponent(q)),j=await r.json();if(!j[0])return toast("Lieu introuvable");const ll={lat:+j[0].lat,lng:+j[0].lon};setP(ll);pk2.setView([ll.lat,ll.lng],17)}catch(e){toast("Recherche indisponible : place le repère à la main")}};
+ $("#qb").onclick=go;$("#qs").onkeydown=e=>{if(e.key==="Enter")go()};
+}
+/* sorties et annonces */
+function renderEv(){
+ const p=$("#pg-ev");if(p.querySelector("input:focus,textarea:focus,select:focus"))return;
+ p.innerHTML=`<h1>Sorties</h1><div class="seg"><button data-t="ev" class="${evTab==="ev"?"on":""}">Sorties</button><button data-t="ad" class="${evTab==="ad"?"on":""}">Annonces</button></div><div id="evb"></div>`;
+ p.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>{evTab=b.dataset.t;evForm=false;renderEv()});
+ if(evTab==="ev")renderEvents();else renderAds();
+}
+function renderEvents(){
+ const b=$("#evb"),t=Date.now(),list=events.filter(e=>Date.parse(e.at)>t-3*36e5).sort((a,c)=>Date.parse(a.at)-Date.parse(c.at));
+ let h=evForm?`<div class="card"><b>Créer une sortie</b><input type="text" id="et" placeholder="Titre (ex : balade bord de mer)" maxlength="60" style="margin-top:8px" value="${esc(evDraft.title)}"><label class="mu">Date et heure</label><input type="datetime-local" id="ed" value="${esc(evDraft.d)}"><label class="mu">Véhicule</label><select id="evv"><option value="all">Tous</option>${Object.entries(VEH).map(([k,v])=>`<option value="${k}">${v[0]} ${v[1]}</option>`).join("")}</select><label class="mu">Lieu du rendez-vous</label><input type="text" id="el" placeholder="Nom du lieu (ex : devant la plage)" maxlength="60" value="${esc(evDraft.place)}"><button class="btn ghost" id="el2" style="margin-bottom:6px">📍 Choisir le lieu sur la carte</button><p class="mu" style="margin-bottom:10px">${evDraft.loc?"✅ Lieu choisi sur la carte":"⚠️ Aucun lieu choisi pour l'instant"}</p><button class="btn" id="eo">Publier</button><button class="btn ghost" id="ex" style="margin-top:8px">Annuler</button></div>`:`<button class="btn" id="en" style="margin-bottom:12px">＋ Créer une sortie</button>`;
+ h+=list.length?list.map(e=>{const g=rsvps.filter(r=>r.e===e.id),going=g.some(r=>r.u===uid),vv=VEH[e.v];return `<div class="card"><b>${esc(e.title)}</b><div class="mu">📅 ${fmt(e.at)} · ${vv?vv[0]+" "+vv[1]:"Tous véhicules"}${e.clan&&clans.find(c=>c.id===e.clan)?" · 🛡 "+esc(clans.find(c=>c.id===e.clan).n):""}</div>${e.place?`<div class="mu">📍 ${esc(e.place)}</div>`:""}<div class="mu">Par ${esc(e.un)} · ${g.length} participant(s)${pos?" · à "+(hav(pos,e)/1000).toFixed(1)+" km":""}</div><div class="row" style="margin-top:10px;flex-wrap:wrap"><button class="btn sm ${going?"ghost":""}" data-g="${e.id}">${going?"Je n'y vais plus":"J'y vais"}</button><button class="btn sm ghost" data-m="${e.id}">Voir sur la carte</button><a class="btn sm ghost" style="text-decoration:none;display:inline-block" target="_blank" rel="noopener noreferrer" href="https://www.google.com/maps/dir/?api=1&destination=${e.lat},${e.lng}">Y aller</a>${e.u===uid?`<button class="btn sm ghost" data-d="${e.id}">Supprimer</button>`:""}</div></div>`}).join(""):'<div class="mu">Aucune sortie prévue. Crée la première !</div>';
+ b.innerHTML=h;
+ if($("#en")&&!can("ev"))$("#en").insertAdjacentHTML("afterend",'<p class="mu" style="margin-bottom:10px">Pour créer une sortie, il faut être dans un clan avec le rôle Chef, Officier ou Organisateur.</p>');
+ if($("#en"))$("#en").onclick=()=>{if(!can("ev"))return toast("Il faut être Chef, Officier ou Organisateur d'un clan");evForm=true;renderEv()};
+ if($("#ex"))$("#ex").onclick=()=>{evForm=false;renderEv()};
+ if($("#et")){$("#et").oninput=e=>{evDraft.title=e.target.value};$("#ed").onchange=e=>{evDraft.d=e.target.value};$("#ed").oninput=e=>{evDraft.d=e.target.value};$("#evv").value=evDraft.v;$("#evv").onchange=e=>{evDraft.v=e.target.value};$("#el").oninput=e=>{evDraft.place=e.target.value};$("#el2").onclick=()=>pickLocation(evDraft.loc,ll=>{evDraft.loc=ll;renderEv()})}
+ if($("#eo"))$("#eo").onclick=async()=>{if(!can("ev"))return toast("Il faut être Chef, Officier ou Organisateur d'un clan");const title=evDraft.title.trim(),d=evDraft.d;if(!title||!d)return toast("Ajoute un titre et une date");if(!evDraft.loc)return toast("Choisis le lieu du rendez-vous sur la carte");const h=evDraft.loc;
+  const r=await sb.from("events").insert({title,clan:me.clan,v:evDraft.v,place:evDraft.place.trim()||null,lat:h.lat,lng:h.lng,at:new Date(d).toISOString(),u:uid,un:me.n});if(r.error)return fail(r.error);evForm=false;evDraft={title:"",d:"",v:"all",place:"",loc:null};toast("Sortie publiée");renderEv()};
+ b.querySelectorAll("[data-g]").forEach(x=>x.onclick=()=>{const id=x.dataset.g+"_"+uid,going=rsvps.some(r=>r.id===id);
+  if(going)sb.from("rsvps").delete().eq("id",id).then(chk);else sb.from("rsvps").upsert({id,e:x.dataset.g,u:uid,un:me.n}).then(chk)});
+ b.querySelectorAll("[data-m]").forEach(x=>x.onclick=()=>{const e=events.find(e=>e.id===x.dataset.m);gotoTab("map");if(e)map.setView([e.lat,e.lng],16)});
+ b.querySelectorAll("[data-d]").forEach(x=>x.onclick=()=>sb.from("events").delete().eq("id",x.dataset.d).then(chk));
+}
+function renderAds(){
+ const b=$("#evb");
+ let h=evForm?`<div class="card"><b>Nouvelle annonce</b><input type="text" id="at" placeholder="Titre (ex : pneu 10 pouces)" maxlength="60" style="margin-top:8px"><input type="text" id="ap" placeholder="Prix (ex : 25 €) ou échange" maxlength="20"><textarea id="ad" rows="3" maxlength="300" placeholder="Description"></textarea><p class="mu" style="margin-bottom:10px">Les acheteurs te contactent avec les réseaux de ton profil.</p><button class="btn" id="ao">Publier</button><button class="btn ghost" id="ax" style="margin-top:8px">Annuler</button></div>`:`<button class="btn" id="an" style="margin-bottom:12px">＋ Publier une annonce</button>`;
+ h+=ads.slice().sort((a,c)=>Date.parse(c.t)-Date.parse(a.t)).slice(0,50).map(a=>{const o=riders.find(r=>r.id===a.u);return `<div class="card"><b>${esc(a.title)}</b> <span class="tag">${esc(a.price||"")}</span><div class="mu" style="margin:4px 0">${esc(a.d||"")}</div><div class="mu">Par ${esc(a.un)}</div><div>${chips(o&&o.ct,CT,link)}</div>${a.u===uid?`<button class="btn sm ghost" data-x="${a.id}" style="margin-top:8px">Supprimer</button>`:""}</div>`}).join("")||'<div class="mu">Aucune annonce pour l\'instant.</div>';
+ b.innerHTML=h;
+ if($("#an")&&myRole()!=="chef")$("#an").insertAdjacentHTML("afterend",'<p class="mu" style="margin-bottom:10px">Seuls les chefs de clan peuvent publier une annonce.</p>');
+ if($("#an"))$("#an").onclick=()=>{if(myRole()!=="chef")return toast("Seuls les chefs de clan peuvent publier une annonce");evForm=true;renderEv()};
+ if($("#ax"))$("#ax").onclick=()=>{evForm=false;renderEv()};
+ if($("#ao"))$("#ao").onclick=async()=>{if(myRole()!=="chef")return toast("Seuls les chefs de clan peuvent publier une annonce");const title=$("#at").value.trim();if(!title)return toast("Ajoute un titre");
+  const r=await sb.from("ads").insert({title,price:$("#ap").value.trim(),d:$("#ad").value.trim(),u:uid,un:me.n});if(r.error)return fail(r.error);evForm=false;toast("Annonce publiée");renderEv()};
+ b.querySelectorAll("[data-x]").forEach(x=>x.onclick=()=>sb.from("ads").delete().eq("id",x.dataset.x).then(chk));
+}
+
+/* ---------- rôles du clan, alertes SOS ---------- */
+let mrows=[],alerts=[];
+const handled=new Set(),seenA=new Set(LSget("rc_seen_alerts",[]));
+const PERM={chef:["ev","inv","req"],officier:["ev","inv","req"],organisateur:["ev"],recruteur:["inv","req"],membre:[]};
+const ROLES={chef:"👑 Chef",officier:"⭐ Officier",organisateur:"📅 Organisateur",recruteur:"🤝 Recruteur",membre:"Membre"};
+const ROLEORD=["chef","officier","organisateur","recruteur","membre"];
+const myM=c=>mrows.find(m=>m.u===uid&&(!c||m.clan===c));
+const myRole=()=>{const m=myM();return m?m.role:""};
+const can=(p,c)=>{const m=myM(c);return !!m&&(PERM[m.role]||[]).includes(p)};
+function syncClan(){
+ const m=mrows.find(x=>x.u===uid),nc=m?m.clan:"",c=clans.find(c=>c.id===nc),nn=c?c.n:(nc?me.cn:"");
+ const changed=nc!==me.clan;
+ if(changed||nn!==me.cn){me.clan=nc;me.cn=nn;if(started)push(true)}
+ if(changed&&page==="clans")renderClans();
+ if(page==="map")hud();
+ checkAlerts();
+}
+function renderRoster(){
+ const p=$("#roster");if(!p)return;if(!me.clan){p.innerHTML="";return}
+ const ms=mrows.filter(m=>m.clan===me.clan).sort((a,b)=>ROLEORD.indexOf(a.role)-ROLEORD.indexOf(b.role)),chef=myRole()==="chef";
+ p.innerHTML=`<div class="card"><b>Membres (${ms.length})</b>`+ms.map(m=>{const r=riders.find(x=>x.id===m.u),nm=(r&&r.n)||"Rider";return `<div class="row" style="margin-top:10px">${avId(m.u,nm)}<div class="sp"><b>${esc(nm)}${m.u===uid?" (toi)":""}</b><div class="mu">${ROLES[m.role]||m.role}</div></div>${chef&&m.u!==uid?`<select data-rl="${esc(m.u)}" aria-label="Rôle de ${esc(nm)}" style="width:auto;margin:0;padding:8px">${["officier","organisateur","recruteur","membre"].map(k=>`<option value="${k}" ${m.role===k?"selected":""}>${ROLES[k]}</option>`).join("")}</select><button class="btn sm ghost" data-kk="${esc(m.u)}">Retirer</button>`:""}</div>`}).join("")+`<p class="mu" style="margin-top:12px">Seul le chef peut changer les rôles. Officier : sorties, invitations, demandes. Organisateur : sorties. Recruteur : invitations et demandes.</p></div>`;
+ p.querySelectorAll("[data-rl]").forEach(s=>s.onchange=()=>sb.from("members").update({role:s.value}).eq("clan",me.clan).eq("u",s.dataset.rl).then(chk));
+ p.querySelectorAll("[data-kk]").forEach(b=>b.onclick=()=>{if(confirm("Retirer ce membre du clan ?"))sb.from("members").delete().eq("clan",me.clan).eq("u",b.dataset.kk).then(chk)});
+}
+function showAlert(a){
+ seenA.add(a.id);LSset("rc_seen_alerts",[...seenA].slice(-50));
+ try{if(navigator.vibrate)navigator.vibrate([300,150,300,150,600])}catch(e){}
+ modal(`<h1 style="color:#e5484d">🆘 SOS du clan</h1><p style="margin-bottom:12px"><b>${esc(a.un)}</b> a besoin d'aide !<br><span class="mu">${fmt(a.t)}</span></p><button class="btn" id="al1">📍 Voir sur la carte</button><a class="btn" style="display:block;text-align:center;text-decoration:none;margin-top:8px" target="_blank" rel="noopener noreferrer" href="https://www.google.com/maps/dir/?api=1&destination=${a.lat},${a.lng}">🧭 Y aller</a><button class="btn ghost" id="px" style="margin-top:8px">Fermer</button><p class="mu" style="margin-top:12px">En cas d'urgence vitale, appelle le 112.</p>`);
+ $("#al1").onclick=()=>{closeModal();gotoTab("map");map.setView([a.lat,a.lng],17)};
+}
+function checkAlerts(){
+ if(!me.clan)return;
+ alerts.filter(a=>a.clan===me.clan&&a.u!==uid&&Date.now()-Date.parse(a.t)<2*36e5&&!seenA.has(a.id)).forEach(showAlert);
+}
+function alertSheet(a){
+ showSheet(`<div class="row"><div class="sp"><b>🆘 SOS de ${esc(a.un)}</b><div class="mu">${fmt(a.t)}</div></div><button class="btn sm ghost" id="cl" aria-label="Fermer">✕</button></div><div style="margin-top:10px"><a class="chip" target="_blank" rel="noopener noreferrer" href="https://www.google.com/maps/dir/?api=1&destination=${a.lat},${a.lng}">🧭 Y aller</a></div>${a.u===uid?'<button class="btn sm" id="ok1" style="margin-top:10px">Je vais bien : arrêter l\'alerte</button>':""}`);
+ if(a.u===uid)$("#ok1").onclick=()=>{sb.from("alerts").delete().eq("id",a.id).then(chk);$("#cl").click()};
+}
+
+/* ---------- photo, couleur, radars et police ---------- */
+const PAL=["#ffc933","#ff6b6b","#4dabf7","#51cf66","#cc5de8","#ff922b","#20c997","#f783ac"];
+const EXP={danger:7*864e5,radar:864e5,police:2*36e5,pothole:30*864e5,works:14*864e5,accident:3*36e5,slippery:2*864e5};
+const noCtl=!!(window.SB&&window.SB.noControls);
+function safeCol(c){return /^#[0-9a-fA-F]{6}$/.test(c||"")?c:""}
+function safeImg(i){return /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/.test(i||"")&&i.length<30000?i:""}
+function bgImg(i){i=safeImg(i);return i?`background-image:url('${i}');background-size:cover;background-position:center;`:""}
+function av(r){const i=safeImg(r.img);return `<div class="av" style="background:${colOf(r.id)};${bgImg(r.img)}">${i?"":esc((r.n||"?")[0].toUpperCase())}</div>`}
+function avId(id,name){return av(riders.find(x=>x.id===id)||{id,n:name})}
+function prvHtml(){const i=safeImg(me.img);return `<div class="av" style="width:56px;height:56px;font-size:22px;background:${safeCol(me.col)||colOf(uid)};${bgImg(me.img)}">${i?"":esc((me.n||"?")[0].toUpperCase())}</div>`}
+function lookHtml(){return `<label class="mu">Photo et couleur sur la carte</label><div class="row" style="margin-bottom:10px"><div id="prv">${prvHtml()}</div><div class="sp"><label class="btn sm ghost" style="display:inline-block;cursor:pointer">📷 Choisir une photo<input type="file" id="f-img" accept="image/*" hidden></label> <button type="button" class="btn sm ghost" id="f-imgx">Retirer</button></div></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">${PAL.map(c=>`<button type="button" data-col="${c}" aria-label="Couleur ${c}" style="width:34px;height:34px;border-radius:50%;border:3px solid ${me.col===c?"var(--tx)":"transparent"};background:${c};cursor:pointer"></button>`).join("")}<input type="color" id="f-col" value="${safeCol(me.col)||"#ffc933"}" aria-label="Couleur personnalisée" style="width:40px;height:34px;border:0;background:none;padding:0"></div>`}
+function refreshLook(){const p=$("#prv");if(p)p.innerHTML=prvHtml();document.querySelectorAll("[data-col]").forEach(b=>{b.style.borderColor=me.col===b.dataset.col?"var(--tx)":"transparent"})}
+function setCol(c){if(!safeCol(c))return;me.col=c;refreshLook();if(meM)meM.setStyle({fillColor:c});push(true)}
+function pickPhoto(f){
+ if(!f)return;const fr=new FileReader();
+ fr.onload=()=>{const im=new Image();
+  im.onload=()=>{const S=96,c=document.createElement("canvas");c.width=c.height=S;const m=Math.min(im.width,im.height);
+   c.getContext("2d").drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,S,S);
+   me.img=c.toDataURL("image/jpeg",0.72);refreshLook();push(true);toast("Photo ajoutée")};
+  im.onerror=()=>toast("Image illisible");im.src=fr.result};
+ fr.readAsDataURL(f);
+}
+document.addEventListener("change",e=>{if(e.target.id==="f-img")pickPhoto(e.target.files[0]);if(e.target.id==="f-col")setCol(e.target.value)});
+document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest("[data-col]");if(b)setCol(b.dataset.col);if(e.target.id==="f-imgx"){me.img="";refreshLook();push(true)}});
+
+/* ---------- quêtes, visite guidée, rayon, itinéraire, appli ---------- */
+const ld=t=>new Date(new Date(t).getTime()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
+const qTrips=()=>trips().filter(t=>t.d===day()),qMin=()=>qTrips().reduce((s,t)=>s+t.min,0),qLong=()=>qTrips().reduce((m,t)=>Math.max(m,t.km),0),qMet=()=>LSget("rc_met_"+day(),[]).length,qPts=()=>pins.filter(p=>p.u===uid&&ld(p.t)===day()).length,qRt=()=>LSget("rc_rt_"+day(),0),qDays=()=>{const lim=Date.now()-7*864e5;return new Set(trips().filter(t=>t.t0>lim).map(t=>t.d)).size};
+const QG={
+ km:[{id:"km3",t:"Rouler 3 km aujourd'hui",g:3,v:todayKm,xp:30},{id:"km5",t:"Rouler 5 km aujourd'hui",g:5,v:todayKm,xp:50},{id:"km10",t:"Rouler 10 km aujourd'hui",g:10,v:todayKm,xp:90}],
+ met:[{id:"met1",t:"Croiser 1 rider en roulant",g:1,v:qMet,xp:25},{id:"met3",t:"Croiser 3 riders en roulant",g:3,v:qMet,xp:40}],
+ tr:[{id:"tr1",t:"Faire un trajet aujourd'hui",g:1,v:()=>qTrips().length,xp:20},{id:"tr2",t:"Faire 2 trajets aujourd'hui",g:2,v:()=>qTrips().length,xp:30}],
+ lg:[{id:"long4",t:"Faire un trajet de plus de 4 km",g:4,v:qLong,xp:60}],
+ mn:[{id:"min20",t:"Rouler pendant 20 minutes",g:20,v:qMin,xp:50}],
+ pt:[{id:"pt1",t:"Ajouter un point sur la carte",g:1,v:qPts,xp:30}],
+ rt:[{id:"rt1",t:"Calculer un itinéraire",g:1,v:qRt,xp:25}]
+};
+const QW=[{id:"wk15",t:"Rouler 15 km cette semaine",g:15,v:weekKm,xp:120,w:1},{id:"wk30",t:"Rouler 30 km cette semaine",g:30,v:weekKm,xp:250,w:1},{id:"wd3",t:"Rouler 3 jours différents cette semaine",g:3,v:qDays,xp:150,w:1}];
+function qpick(a,n,seed){a=a.slice();const o=[];let x=(Math.abs(seed)%2147483646)+1;x=(x*48271)%2147483647;while(o.length<n&&a.length){x=(x*48271)%2147483647;o.push(a.splice(x%a.length,1)[0])}return o}
+const dseed=()=>Math.floor((Date.now()-new Date().getTimezoneOffset()*6e4)/864e5);
+const chList=()=>{const d=dseed(),ks=qpick(Object.keys(QG),3,d);return ks.map((k,i)=>qpick(QG[k],1,d*7+i+3)[0]).concat(qpick(QW,1,Math.floor(d/7)))};
+/* maintenir l'écran allumé */
+let wl=null;
+async function keepAwake(on){try{if(on){if(navigator.wakeLock&&!wl){wl=await navigator.wakeLock.request("screen");wl.addEventListener("release",()=>{wl=null})}}else if(wl){await wl.release();wl=null}}catch(e){}}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&(riding||gp.on))keepAwake(true)});
+/* visite guidée */
+const TOUR=[
+ {t:"Bienvenue sur Ride Clans ! Je te montre l'essentiel en 1 minute."},
+ {s:"#vis",t:"Cet interrupteur te rend visible ou invisible. Invisible, ta position n'est plus partagée."},
+ {s:"#fl",t:"Les filtres : n'affiche que les trottinettes, les vélos, ou seulement ton clan."},
+ {s:"#go",t:"GO lance un trajet : la distance, la durée et l'XP sont comptées. STOP l'arrête."},
+ {s:"#rt",t:"🧭 Itinéraire : choisis un départ et une arrivée, puis suis le guidage comme un GPS."},
+ {s:"#addp",t:"＋ ajoute un point sur la carte : danger, nid de poule, travaux, radar, borne de recharge…"},
+ {s:"#sos",t:"🆘 prévient tout ton clan avec ta position, et prépare un SMS pour ton contact d'urgence."},
+ {s:'nav [data-p="ev"]',t:"Sorties : les rendez-vous organisés par les clans, et les annonces des chefs."},
+ {s:'nav [data-p="clans"]',t:"Clans : rejoins une équipe, reçois les demandes, gère les rôles."},
+ {s:'nav [data-p="rank"]',t:"Classement : clans, riders, et riders près de toi."},
+ {s:'nav [data-p="me"]',t:"Profil : photo, couleur, contacts, distance d'affichage, défis et badges."}
+];
+let tstep=0;
+function offerTour(){
+ LSset("rc_tour",1);
+ modal(`<h1>Bienvenue 👋</h1><p class="mu" style="margin-bottom:14px">Tu veux une petite visite guidée pour comprendre à quoi servent les boutons ?</p><button class="btn" id="t-y">Oui, montre-moi</button><button class="btn ghost" id="px" style="margin-top:8px">Non merci</button><p class="mu" style="margin-top:10px">Tu pourras la revoir dans Profil.</p>`);
+ $("#t-y").onclick=()=>{closeModal();startTour()};
+}
+function startTour(){
+ gotoTab("map");tstep=0;
+ if(!$("#tour"))document.body.insertAdjacentHTML("beforeend",'<div id="tour" style="position:fixed;inset:0;z-index:2800;display:none"><div id="thl" style="position:fixed;border-radius:14px;box-shadow:0 0 0 9999px rgba(0,0,0,.75);pointer-events:none;transition:all .25s"></div><div id="tbb" class="card" style="position:fixed;left:14px;right:14px;max-width:520px;margin:0 auto"></div></div>');
+ $("#tour").style.display="block";setTimeout(tourStep,150);
+}
+const endTour=()=>{$("#tour").style.display="none"};
+function tourStep(){
+ const s=TOUR[tstep],el=s.s?document.querySelector(s.s):null,hl=$("#thl"),bb=$("#tbb");
+ if(el){const r=el.getBoundingClientRect(),p=6,low=r.top+r.height/2>innerHeight/2;Object.assign(hl.style,{left:(r.left-p)+"px",top:(r.top-p)+"px",width:(r.width+2*p)+"px",height:(r.height+2*p)+"px"});bb.style.top=low?"70px":"auto";bb.style.bottom=low?"auto":"110px"}
+ else{Object.assign(hl.style,{left:"50%",top:"45%",width:"0px",height:"0px"});bb.style.top="auto";bb.style.bottom="110px"}
+ bb.innerHTML=`<div class="mu" style="margin-bottom:6px">${tstep+1} / ${TOUR.length}</div><div style="margin-bottom:12px">${s.t}</div><div class="row"><button class="btn sm ghost" id="tk">Passer</button><span class="sp"></span>${tstep?'<button class="btn sm ghost" id="tp">Retour</button>':""}<button class="btn sm" id="tn">${tstep===TOUR.length-1?"Terminer":"Suivant"}</button></div>`;
+ $("#tk").onclick=endTour;$("#tn").onclick=()=>{if(tstep>=TOUR.length-1)endTour();else{tstep++;tourStep()}};if($("#tp"))$("#tp").onclick=()=>{tstep--;tourStep()};
+}
+/* réglages : distance d'affichage, installation */
+let radiusKm=+LSget("rc_rad",30)||30,deferredInstall=null;
+addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstall=e;if(page==="me")renderMe()});
+const standalone=()=>(window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||navigator.standalone;
+function settingsHtml(){return `<div class="card"><b>Réglages</b><label class="mu" style="margin-top:10px">Voir les riders jusqu'à</label><select id="s-rad">${[1,2,5,10,20,30,50].map(k=>`<option value="${k}" ${radiusKm===k?"selected":""}>${k} km</option>`).join("")}</select><button class="btn ghost" id="tourb" style="margin-bottom:10px">🎓 Revoir la visite guidée</button>${standalone()?'<div class="mu">✅ Application installée.</div>':deferredInstall?'<button class="btn" id="inst">📲 Installer l\'application</button>':'<div class="mu">📲 Pour l\'installer : menu du navigateur, puis « Ajouter à l\'écran d\'accueil » (iPhone : Partager, puis « Sur l\'écran d\'accueil »).</div>'}<p class="mu" style="margin-top:10px">Pendant un trajet (GO) ou un guidage, l'écran reste allumé pour que le GPS continue. Si tu verrouilles le téléphone, le suivi s'arrête : un vrai suivi en arrière-plan demande une application mobile native.</p></div>`}
+document.addEventListener("change",e=>{if(e.target.id==="s-rad"){radiusKm=+e.target.value;LSset("rc_rad",radiusKm);drawMarkers();toast("Distance d'affichage : "+radiusKm+" km")}});
+document.addEventListener("click",e=>{if(e.target.id==="tourb")startTour();if(e.target.id==="inst"&&deferredInstall){deferredInstall.prompt();deferredInstall=null}});
+if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+/* itinéraire et guidage */
+let route=null,routeLayer=null,destM=null,rtDraft={to:null,toTxt:""};
+const gp={on:false,si:0,said:-1,lastRe:0,voice:true};
+const RTS={bike:"routed-bike",foot:"routed-foot",car:"routed-car",moto:"routed-car"},REDK=["danger","police","radar","pothole","works","accident","slippery"];
+const fmtD=m=>m>=1000?(m/1000).toFixed(1)+" km":(Math.round(m/10)*10)+" m",fmtT=s=>{const m=Math.max(1,Math.round(s/60));return m>=60?Math.floor(m/60)+" h "+(m%60)+" min":m+" min"};
+async function geocode(q){const r=await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&q="+encodeURIComponent(q)),j=await r.json();return j[0]?{lat:+j[0].lat,lng:+j[0].lon}:null}
+async function calcRoute(a,b,mode){
+ const r=await fetch(`https://routing.openstreetmap.de/${RTS[mode]||RTS.bike}/route/v1/driving/${a.lng},${a.lat};${b.lng},${b.lat}?overview=full&geometries=geojson&steps=true`),j=await r.json();
+ if(!j.routes||!j.routes[0])throw new Error("no route");
+ const rt=j.routes[0];return{coords:rt.geometry.coordinates.map(c=>[c[1],c[0]]),steps:rt.legs[0].steps,dist:rt.distance,dur:rt.duration};
+}
+function instr(s){
+ const m=s.maneuver,t=m.type,md=m.modifier||"",nm=s.name?" sur "+s.name:"";
+ const D={"left":"à gauche","slight left":"légèrement à gauche","sharp left":"franchement à gauche","right":"à droite","slight right":"légèrement à droite","sharp right":"franchement à droite","straight":"tout droit","uturn":"demi-tour"}[md]||"";
+ if(t==="depart")return "Démarre"+nm;
+ if(t==="arrive")return "Tu es arrivé à destination";
+ if(/roundabout|rotary/.test(t))return "Au rond-point, prends la "+(m.exit||1)+"e sortie"+nm;
+ if(md==="uturn")return "Fais demi-tour"+nm;
+ if(t==="continue"||t==="new name")return "Continue "+(D||"tout droit")+nm;
+ return "Tourne "+(D||"")+nm;
+}
+const arrow=s=>{const t=s.maneuver.type,md=s.maneuver.modifier||"";return t==="arrive"?"🏁":t==="depart"?"🚀":/roundabout|rotary/.test(t)?"🔄":md==="uturn"?"↩️":/left/.test(md)?"⬅️":/right/.test(md)?"➡️":"⬆️"};
+const gmaps=(A,B,mode)=>`https://www.google.com/maps/dir/?api=1&origin=${A.lat},${A.lng}&destination=${B.lat},${B.lng}&travelmode=${mode==="foot"?"walking":mode==="car"?"driving":mode==="moto"?"two-wheeler":"bicycling"}`;
+function clearRouteLayers(){if(routeLayer){map.removeLayer(routeLayer);routeLayer=null}if(destM){map.removeLayer(destM);destM=null}}
+function drawRoute(fit){clearRouteLayers();routeLayer=L.polyline(route.coords,{color:"#1971c2",weight:6,opacity:.9}).addTo(map);destM=L.marker([route.B.lat,route.B.lng],{icon:pinIcon("🏁","x")}).addTo(map);if(fit)map.fitBounds(routeLayer.getBounds(),{padding:[50,50]})}
+function clearRoute(){clearRouteLayers();route=null;stopNav()}
+function routeSummary(){return `<div class="card"><b>${fmtD(route.dist)} · ${fmtT(route.dur)}</b><div class="mu">${route.mode==="foot"?"🚶 À pied":route.mode==="car"?"🚗 Voiture":route.mode==="moto"?"🏍️ Moto / scooter":"🚲 Vélo / trottinette"}</div><button class="btn" id="r-nav" style="margin-top:10px">▶ Démarrer le guidage</button><a class="btn ghost" style="display:block;text-align:center;text-decoration:none;margin-top:8px" target="_blank" rel="noopener noreferrer" href="${gmaps(route.A,route.B,route.mode)}">Ouvrir dans Google Maps</a><details style="margin-top:10px"><summary class="mu">Voir les étapes</summary>${route.steps.map(s=>`<div class="mu" style="margin-top:6px">${arrow(s)} ${esc(instr(s))} · ${fmtD(s.distance)}</div>`).join("")}</details><button class="btn ghost" id="r-clr" style="margin-top:8px">Effacer l'itinéraire</button></div>`}
+function bindRoute(){if($("#r-nav"))$("#r-nav").onclick=()=>{closeModal();startNav()};if($("#r-clr"))$("#r-clr").onclick=()=>{clearRoute();closeModal();toast("Itinéraire effacé")}}
+function openRoute(){
+ modal(`<h1>Itinéraire</h1><div id="r-res">${route?routeSummary():""}</div><label class="mu">Départ</label><input type="text" id="r-a" placeholder="Ma position (laisse vide)"><label class="mu">Arrivée</label><input type="text" id="r-b" placeholder="Adresse ou lieu" value="${esc(rtDraft.toTxt)}"><button class="btn ghost" id="r-p" style="margin-bottom:8px">📍 Choisir l'arrivée sur la carte</button><label class="mu">Mode</label><select id="r-m"><option value="bike">🚲 Vélo / trottinette</option><option value="moto">🏍️ Moto / scooter</option><option value="foot">🚶 À pied</option><option value="car">🚗 Voiture</option></select><button class="btn" id="r-go">Calculer l'itinéraire</button><button class="btn ghost" id="px" style="margin-top:8px">Fermer</button>`);
+ bindRoute();
+ $("#r-m").value=(me.v==="moto"||me.v==="scooter")?"moto":"bike";
+ $("#r-p").onclick=()=>pickLocation(rtDraft.to,ll=>{rtDraft.to=ll;rtDraft.toTxt="📍 Lieu choisi sur la carte";$("#r-b").value=rtDraft.toTxt});
+ $("#r-go").onclick=async()=>{
+  const res=$("#r-res"),msg=(t,x)=>{res.innerHTML=`<p class="mu" style="margin-bottom:10px">${t}</p>`+(x||"")};
+  msg("Calcul en cours…");let A=null,B=null;
+  try{
+   const aT=$("#r-a").value.trim(),bT=$("#r-b").value.trim(),mode=$("#r-m").value;
+   A=aT?await geocode(aT):(pos?{lat:pos.lat,lng:pos.lng}:null);
+   if(!A)return msg(aT?"Départ introuvable.":"Active la localisation ou saisis un départ.");
+   B=(rtDraft.to&&(!bT||bT===rtDraft.toTxt))?rtDraft.to:(bT?await geocode(bT):null);
+   if(!B)return msg("Arrivée introuvable : précise l'adresse ou choisis-la sur la carte.");
+   route=await calcRoute(A,B,mode);route.A=A;route.B=B;route.mode=mode;LSset("rc_rt_"+day(),1);
+   drawRoute(true);res.innerHTML=routeSummary();bindRoute();
+  }catch(e){msg("Calcul impossible pour le moment (service gratuit occupé ou hors ligne).",A&&B?`<a class="btn ghost" style="display:block;text-align:center;text-decoration:none" target="_blank" rel="noopener noreferrer" href="${gmaps(A,B,$("#r-m").value)}">Ouvrir dans Google Maps</a>`:"")}
+ };
+}
+$("#rt").onclick=openRoute;
+function speak(t){try{if(gp.voice&&window.speechSynthesis){const u=new SpeechSynthesisUtterance(t);u.lang="fr-FR";speechSynthesis.cancel();speechSynthesis.speak(u)}}catch(e){}}
+function navBanner(h){let b=$("#navb");if(!b){$(".hud").insertAdjacentHTML("afterbegin",'<div id="navb" class="pill" style="display:none"></div>');b=$("#navb")}b.style.display="block";b.innerHTML=h;return b}
+function startNav(){if(!route)return;gp.on=true;gp.si=0;gp.said=-1;gp.lastRe=Date.now();keepAwake(true);if(!watching)startGeo();toast("Guidage démarré");navTick()}
+function stopNav(){gp.on=false;keepAwake(riding);const b=$("#navb");if(b)b.style.display="none"}
+async function recalc(){try{const r=await calcRoute({lat:pos.lat,lng:pos.lng},route.B,route.mode);r.A={lat:pos.lat,lng:pos.lng};r.B=route.B;r.mode=route.mode;route=r;drawRoute(false);gp.si=0;gp.said=-1;toast("Itinéraire recalculé")}catch(e){toast("Recalcul impossible")}}
+function navTick(){
+ if(!gp.on||!route||!pos)return;const st=route.steps;
+ while(gp.si<st.length-1){const l=st[gp.si+1].maneuver.location;if(hav(pos,{lat:l[1],lng:l[0]})<25)gp.si++;else break}
+ const nx=st[Math.min(gp.si+1,st.length-1)],l=nx.maneuver.location,d=hav(pos,{lat:l[1],lng:l[0]}),txt=instr(nx);
+ if(nx.maneuver.type==="arrive"&&d<25){speak("Tu es arrivé");toast("Arrivé !");stopNav();return}
+ let off=Infinity;for(const c of route.coords){const x=hav(pos,{lat:c[0],lng:c[1]});if(x<off)off=x;if(off<40)break}
+ const b=navBanner(`<div class="row"><div style="font-size:30px">${arrow(nx)}</div><div class="sp"><b>${esc(txt)}</b><div class="mu">${off>90?"Hors itinéraire · recalcul…":"dans "+fmtD(d)}</div></div><button class="btn sm ghost" id="nv" aria-label="Voix">${gp.voice?"🔊":"🔇"}</button><button class="btn sm ghost" id="nx" aria-label="Arrêter le guidage">✕</button></div>`);
+ $("#nv").onclick=()=>{gp.voice=!gp.voice;navTick()};$("#nx").onclick=()=>{stopNav();toast("Guidage arrêté")};
+ if(gp.said!==gp.si&&d<80){gp.said=gp.si;speak(txt+(d>30?" dans "+(Math.round(d/10)*10)+" mètres":""))}
+ if(off>90&&Date.now()-gp.lastRe>15000){gp.lastRe=Date.now();recalc()}
+}
+
+/* ---------- classement ---------- */
+function renderRank(){
+ const p=$("#pg-rank");
+ p.innerHTML=`<h1>Classement</h1><div class="seg"><button class="on" data-t="c">Clans</button><button data-t="r">Riders</button><button data-t="n">Proches</button></div><div id="rl"></div>`;
+ const list=t=>{let a;
+  if(t==="c")a=clans.map(c=>({n:c.n,x:members(c.id).reduce((s,r)=>s+(r.xp||0),0),s:members(c.id).length+" membre(s)",me:c.id===me.clan}));
+  else a=riders.filter(r=>r.id!==uid&&(t==="r"||(pos&&r.lat!=null&&hav(pos,r)<30000))).map(r=>({n:r.n,x:r.xp||0,s:"Niv. "+lvlOf(r.xp||0),me:false})).concat([{n:me.n+" (toi)",x:Math.round(me.xp),s:"Niv. "+lvlOf(me.xp),me:true}]);
+  a.sort((u,v)=>v.x-u.x);
+  $("#rl").innerHTML=a.length?a.map((e,i)=>`<div class="card row" ${e.me?'style="border-color:var(--ac);border-width:2px"':""}><span class="rank">${i<3?["🥇","🥈","🥉"][i]:i+1}</span><div class="sp"><b>${esc(e.n)}</b><div class="mu">${e.s}</div></div><b>${e.x} XP</b></div>`).join(""):'<div class="mu">Rien à classer pour l\'instant.</div>'};
+ list("c");p.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>{p.querySelectorAll(".seg button").forEach(x=>x.classList.toggle("on",x===b));list(b.dataset.t)});
+}
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
+ document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("on",x===b));
+ page=b.dataset.p;document.querySelectorAll(".pg").forEach(p=>p.classList.toggle("on",p.id==="pg-"+page));
+ if(page==="ev")renderEv();if(page==="clans")renderClans();if(page==="rank")renderRank();if(page==="me")renderMe();if(page==="map"){map.invalidateSize();hud()}});
+</script>
+</body>
+</html>
